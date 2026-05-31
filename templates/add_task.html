@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Create Task{% endblock %}
+
+{% block content %}
+<div class="container mt-3 mt-md-5">
+    <div class="row justify-content-center">
+        <div class="col-11 col-sm-10 col-md-9 col-lg-8 col-xl-7">
+
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show"
+                role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <!-- Navigation / Home button -->
+            <div class="mb-3 text-start">
+                <a href="{{ url_for('home_page') }}" class="btn btn-outline-secondary btn-sm">
+                    ← Back to Home
+                </a>
+                <a href="{{ url_for('show_tasks') }}" class="btn btn-outline-secondary btn-sm ms-2">
+                    📋 My Tasks
+                </a>
+            </div>
+
+            <!-- Task Card -->
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-3 p-sm-4 p-md-5">
+                    <h1 class="card-title text-center h2 mb-3 mb-md-4">Create New Task</h1>
+                    <p class="text-muted text-center mb-4">Stay organized – add a new task below</p>
+
+                    <form method="POST" action="" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <!-- Title -->
+                        <div class="mb-3">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-control form-control-lg" + (" is-invalid" if form.title.errors
+                            else ""), placeholder="Enter task title") }}
+                            {% for error in form.title.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Description (CKEditor) -->
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else
+                            "")) }}
+                            {% for error in form.description.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Category -->
+                        <div class="mb-3">
+                            {{ form.category.label(class="form-label") }}
+                            {{ form.category(class="form-control" + (" is-invalid" if form.category.errors else ""),
+                            placeholder="e.g., Work, Personal, Urgent") }}
+                            {% for error in form.category.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Has deadline checkbox -->
+                        <div class="mb-3 form-check text-start">
+                            {{ form.has_deadline(class="form-check-input", id="hasDeadlineCheckbox") }}
+                            {{ form.has_deadline.label(class="form-check-label") }}
+                        </div>
+
+                        <!-- Deadline field (initially hidden) -->
+                        <div id="deadlineGroup" style="display: none;" class="mb-3">
+                            {{ form.deadline.label(class="form-label") }}
+                            {{ form.deadline(class="form-control" + (" is-invalid" if form.deadline.errors else ""),
+                            placeholder="YYYY-MM-DD") }}
+                            {% for error in form.deadline.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Submit button -->
+                        <div class="d-grid gap-2 mt-4 mt-md-5">
+                            {% set button_label="Edit Task" if is_edit else "Create Task" %}
+                            {{ form.submit(class="btn btn-primary btn-lg py-2 py-md-3", value=button_label) }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CKEditor initialization and deadline toggle script -->
+<script>
+    // Toggle deadline field visibility based on checkbox
+    const checkbox = document.getElementById('hasDeadlineCheckbox');
+    const deadlineGroup = document.getElementById('deadlineGroup');
+    const deadlineInput = document.querySelector('input[name="deadline"]');
+
+    function toggleDeadline() {
+        if (checkbox.checked) {
+            deadlineGroup.style.display = 'block';
+            deadlineInput.required = true;
+        } else {
+            deadlineGroup.style.display = 'none';
+            deadlineInput.required = false;
+            deadlineInput.value = '';
+        }
+    }
+
+    if (checkbox) {
+        checkbox.addEventListener('change', toggleDeadline);
+        toggleDeadline();
+    }
+
+    document.querySelector('form').addEventListener('submit', function () {
+        const btn = this.querySelector('[type="submit"]');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Submitting...';
+        }
+    });
+
+</script>
+
+<!-- Additional custom CSS to align CKEditor box -->
+<style>
+    .card-body {
+        width: 75%
+    }
+    
+    @media (max-width: 768px) {
+        .card-body{
+            width: 100%;
+        }
+    }
+
+    .input-group .is-invalid {
+        border-right: 0;
+    }
+
+    .invalid-feedback.d-block {
+        display: block;
+    }
+</style>
+{% endblock %}

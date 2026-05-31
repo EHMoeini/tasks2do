@@ -1,0 +1,526 @@
+{% extends "base.html" %}
+
+{% block title %}My Tasks{% endblock %}
+
+{% block content %}
+<div class="container mt-3 mt-md-5">
+    <div class="row justify-content-center">
+        <div class="col-11 col-sm-10 col-md-10 col-lg-9 col-xl-8">
+
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show"
+                role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <div class="mb-3 text-start">
+                <a href="{{ url_for('home_page') }}" class="btn btn-outline-secondary btn-sm">
+                    ← Back to Home
+                </a>
+            </div>
+
+            <!-- Page header -->
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 page-header">
+                <h1 class="display-6">My Tasks</h1>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#filterCollapse" aria-expanded="false" aria-controls="filterCollapse">
+                        🔍 Filter & Sort
+                    </button>
+                    <a href="{{ url_for('add_task') }}" class="btn btn-primary">
+                        + Add Task
+                    </a>
+                </div>
+            </div>
+
+            <!-- Collapsible filter panel -->
+            <div class="collapse mb-4" id="filterCollapse">
+                <div class="card card-body bg-light">
+                    <form method="GET" action="{{ url_for('show_tasks') }}" class="row g-3">
+
+                        <!-- Row 1: Sort + Category -->
+                        <div class="col-md-6">
+                            <label for="sort" class="form-label">Sort by</label>
+                            <select name="sort" id="sort" class="form-select">
+                                <option value="date_desc" {% if request.args.sort=='date_desc' %}selected{% endif %}>
+                                    Date (newest first)</option>
+                                <option value="date_asc" {% if request.args.sort=='date_asc' %}selected{% endif %}>Date
+                                    (oldest first)</option>
+                                <option value="deadline_asc" {% if request.args.sort=='deadline_asc' %}selected{% endif
+                                    %}>Deadline (earliest first)</option>
+                                <option value="deadline_desc" {% if request.args.sort=='deadline_desc' %}selected{%
+                                    endif %}>Deadline (latest first)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="category" class="form-label">Category (contains)</label>
+                            <input type="text" name="category" id="category" class="form-control"
+                                placeholder="e.g., work, personal" value="{{ request.args.category or '' }}">
+                        </div>
+
+                        <!-- Row 2: Date (created) range -->
+                        <div class="col-md-6">
+                            <label class="form-label">Date created from</label>
+                            <input type="date" name="date_from" class="form-control"
+                                value="{{ request.args.date_from or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Date created to</label>
+                            <input type="date" name="date_to" class="form-control"
+                                value="{{ request.args.date_to or '' }}">
+                        </div>
+
+                        <!-- Row 3: Deadline range -->
+                        <div class="col-md-6">
+                            <label class="form-label">Deadline from</label>
+                            <input type="date" name="deadline_from" class="form-control"
+                                value="{{ request.args.deadline_from or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Deadline to</label>
+                            <input type="date" name="deadline_to" class="form-control"
+                                value="{{ request.args.deadline_to or '' }}">
+                        </div>
+
+                        <!-- Row 4: Undone only checkbox (full width) -->
+                        <div class="col-12 d-flex align-items-center">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="undone_only" value="yes"
+                                    id="undoneOnly" {% if request.args.undone_only=='yes' %}checked{% endif %}>
+                                <label class="form-check-label" for="undoneOnly">
+                                    Show only incomplete tasks
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Row 5: Buttons -->
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">Apply filters</button>
+                            <a href="{{ url_for('show_tasks') }}" class="btn btn-outline-secondary">Clear all</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Task list -->
+            {% if tasks %}
+            <div class="tasks-container">
+                {% for task in tasks %}
+                <div class="task-item mb-3" data-task-id="{{ task.id }}">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body p-3 p-md-4 w-100">
+                            <!-- GRID layout for main row -->
+                            <div class="task-grid">
+                                <!-- LEFT: checkbox, title, category -->
+                                <div class="d-flex align-items-center gap-3" style="min-width: 0;">
+                                    {% if not task.done: %}
+                                    <input type="checkbox" class="task-done-checkbox form-check-input flex-shrink-0">
+                                    {% endif %}
+                                    <span
+                                        class="task-title h5 mb-0 {% if task.done %}text-decoration-line-through text-muted{% endif %}"
+                                        style="cursor: pointer; text-align: left; word-break: break-word; overflow-wrap: break-word;">
+                                        {{ task.title }}
+                                    </span>
+                                </div>
+                                <!-- RIGHT: deadline, trash -->
+                                <div class="flex align-items-center gap-3 justify-content-end task-actions">
+                                    {% if task.category %}
+                                    <span class="badge bg-secondary flex-shrink-0">{{ task.category }}</span>
+                                    {% endif %}
+                                    {% if task.deadline %}
+                                    <span class="badge days-left-badge flex-shrink-0 ms-1 bg-secondary">—</span>
+                                    {% endif %}
+                                    <span class="delete-task text-danger flex-shrink-0"
+                                        style="cursor: pointer; font-size: 1.3rem;">🗑️</span>
+                                </div>
+                            </div>
+                            <!-- Expandable details -->
+                            <div class="task-details mt-3 pt-2" style="display: none;">
+                                <div class="p-3 bg-light rounded">
+                                    <div class="d-flex justify-content-between align-items-start gap-3">
+                                        <div class="flex-grow-1">
+                                            {% if task.description %}
+                                            <p style="text-align: start;"><strong>Description:</strong></p>
+                                            {% endif %}
+                                        </div>
+                                        {% if not task.done: %}
+                                        <div class="flex-shrink-0">
+                                            <a href="{{ url_for('edit_task', task_id=task.id) }}"
+                                                class="btn btn-outline-secondary btn-sm">
+                                                ✏️ edit
+                                            </a>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div dir="auto">
+                                        <p style="text-align: justify; text-justify: inter-word; hyphens: auto; word-break: break-word; white-space: pre-wrap;">{{ task.description | safe if task.description else '' }}</p>
+                                    </div>
+                                    <p class="mt-2 mb-0"><strong>Created:</strong>📅 {{ task.date.strftime('%Y/%m/%d %H:%M')
+                                        }}
+                                        {% if task.deadline %}
+                                        <br>
+                                        <span class="deadline-date flex-shrink-0"><strong
+                                                class="text-danger">Deadline:</strong>📅 {{
+                                            task.deadline.strftime('%Y/%m/%d %H:%M')
+                                            }}</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            <nav aria-label="Task pages" class="mt-4">
+                <ul class="pagination justify-content-center flex-wrap">
+                    <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+                        <a class="page-link"
+                            href="{{ url_for('show_tasks', page=1, **filter_args) if pagination.has_prev else '#' }}"
+                            aria-label="First">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+
+                    <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+                        <a class="page-link"
+                            href="{{ url_for('show_tasks', page=(pagination.current-1), **filter_args) if pagination.has_prev else '#' }}"
+                            aria-label="Previous">
+                            <span aria-hidden="true">&lt;</span>
+                        </a>
+                    </li>
+
+                    {% set start = [1, pagination.current-1] | max %}
+                    {% set end = [pagination.total, pagination.current+1] | min %}
+                    {% for p in range(start, end + 1) %}
+                    <li class="page-item {{ 'active' if p == pagination.current }}">
+                        <a class="page-link" href="{{ url_for('show_tasks', page=p, **filter_args) }}">
+                            {{ p }}
+                        </a>
+                    </li>
+                    {% endfor %}
+
+                    <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+                        <a class="page-link"
+                            href="{{ url_for('show_tasks', page=(pagination.current+1), **filter_args) if pagination.has_next else '#' }}"
+                            aria-label="Next">
+                            <span aria-hidden="true">&gt;</span>
+                        </a>
+                    </li>
+
+                    <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+                        <a class="page-link"
+                            href="{{ url_for('show_tasks', page=(pagination.total), **filter_args) if pagination.has_next else '#' }}"
+                            aria-label="Last">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            {% else %}
+            <div class="alert alert-info text-center">
+                You have no tasks yet. <a href="{{ url_for('add_task') }}">Create one now</a>.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.task-item').forEach(taskItem => {
+        const deadlineSpan = taskItem.querySelector('.deadline-date');
+        if (!deadlineSpan) return;
+
+        const datetimeMatch = deadlineSpan.textContent.match(/\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}/);
+        if (!datetimeMatch) return;
+
+        const [datePart, timePart] = datetimeMatch[0].split(' ');
+        const [year, month, day] = datePart.split('/').map(Number);
+        const [hour, minute] = timePart.split(':').map(Number);
+        const deadlineDateTime = new Date(year, month - 1, day, hour, minute);
+
+        const now = new Date();
+        const remainingMs = deadlineDateTime - now;
+
+        const badge = taskItem.querySelector('.days-left-badge');
+        if (!badge) return;
+        badge.classList.remove('bg-success', 'bg-warning', 'bg-danger', 'bg-secondary', 'bg-dark');
+
+        // Expired
+        if (remainingMs < 0) {
+            badge.textContent = 'Expired';
+            badge.classList.add('bg-secondary');
+            return;
+        }
+
+        const oneDayMs = 24 * 60 * 60 * 1000;
+        const oneHourMs = 60 * 60 * 1000;
+        const totalDays = remainingMs / oneDayMs;   // can be fractional
+
+        // Determine badge colour based on total days remaining
+        let bgClass = '';
+        if (totalDays <= 3) bgClass = 'bg-danger';
+        else if (totalDays <= 7) bgClass = 'bg-warning';
+        else bgClass = 'bg-success';
+
+        // Format the text
+        let text = '';
+        if (remainingMs < oneDayMs) {
+            // Less than 24 hours → show hours & minutes
+            const hours = Math.floor(remainingMs / oneHourMs);
+            const minutes = Math.floor((remainingMs % oneHourMs) / (1000 * 60));
+            if (hours > 0) text = `${hours}h ${minutes}m`;
+            else text = `${minutes}m`;
+        } else if (totalDays < 7) {
+            // 1 to 6.999 days → show days and hours
+            const fullDays = Math.floor(totalDays);
+            const remainingAfterDays = remainingMs - (fullDays * oneDayMs);
+            const hours = Math.floor(remainingAfterDays / oneHourMs);
+            text = `${fullDays}d ${hours}h`;
+        } else {
+            // 7+ days → show only days
+            const fullDays = Math.floor(totalDays);
+            text = `${fullDays}d`;
+        }
+
+        badge.textContent = text;
+        badge.classList.add(bgClass);
+    });
+
+    // Expand/collapse task details on title click
+    document.querySelectorAll('.task-title').forEach(title => {
+        title.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const taskItem = this.closest('.task-item');
+            const detailsDiv = taskItem.querySelector('.task-details');
+            if (detailsDiv.style.display === 'none' || !detailsDiv.style.display) {
+                detailsDiv.style.display = 'block';
+            } else {
+                detailsDiv.style.display = 'none';
+            }
+        });
+    });
+
+    // Mark done / undone via PATCH
+    document.querySelectorAll('.task-done-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', async function () {
+            const taskItem = this.closest('.task-item');
+            const taskId = taskItem.dataset.taskId;
+            const isChecked = this.checked;
+
+            if (isChecked) {
+                const userConfirmed = confirm('Are you sure you want to mark this task as done?');
+                if (!userConfirmed) {
+                    this.checked = false;
+                    return;
+                }
+            }
+
+            try {
+                const response = await fetch(`/tasks/done/${taskId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ done: isChecked })
+                });
+                if (!response.ok) throw new Error();
+
+                const titleSpan = taskItem.querySelector('.task-title');
+                if (isChecked) {
+                    titleSpan.classList.add('text-decoration-line-through', 'text-muted');
+                    this.disabled = true;
+                } else {
+                    titleSpan.classList.remove('text-decoration-line-through', 'text-muted');
+                    this.disabled = false;
+                }
+            } catch (err) {
+                console.error('Failed to update task done status');
+                this.checked = !isChecked;
+                alert('Could not update task. Please try again.');
+            }
+        });
+    });
+
+    // Delete task via DELETE
+    document.querySelectorAll('.delete-task').forEach(deleteBtn => {
+        deleteBtn.addEventListener('click', async function () {
+            if (!confirm('Are you sure you want to delete this task?')) return;
+            const taskItem = this.closest('.task-item');
+            const taskId = taskItem.dataset.taskId;
+            try {
+                const response = await fetch(`/tasks/delete/${taskId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!response.ok) throw new Error();
+                taskItem.remove();
+            } catch (err) {
+                console.error('Failed to delete task');
+                alert('Could not delete task. Please try again.');
+            }
+        });
+    });
+</script>
+
+<style>
+    .task-item {
+        transition: transform 0.1s ease;
+    }
+
+    .task-item:hover {
+        transform: translateY(-2px);
+    }
+
+    .task-title {
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    .delete-task {
+        transition: transform 0.1s ease;
+    }
+
+    .delete-task:hover {
+        transform: scale(1.1);
+        color: darkred !important;
+    }
+
+    .task-details {
+        display: none;
+    }
+
+    .card {
+        width: 100%;
+    }
+
+    /* Ensure the grid container uses full width */
+    .card-body>div:first-child {
+        width: 100%;
+    }
+
+    /* Prevent long words from overflowing */
+    .task-title {
+        max-width: 100%;
+    }
+
+    /* Responsive grid layout for task cards */
+    .task-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    /* Tablet and mobile adjustments */
+    @media (max-width: 767.98px) {
+        .task-grid {
+            display: block;
+        }
+
+        .task-grid>div:first-child {
+            margin-bottom: 0.75rem;
+        }
+
+        .task-grid>div:last-child {
+            justify-content: flex-start !important;
+            flex-wrap: wrap;
+        }
+
+        .task-actions {
+            flex-wrap: wrap;
+            justify-content: flex-start !important;
+            gap: 0.5rem !important;
+        }
+    }
+
+    /* Small phone adjustments */
+    @media (max-width: 576px) {
+
+        /* Reduce title font size on small screens */
+        .page-header h1.display-6 {
+            font-size: 1.75rem;
+        }
+
+        /* Reduce card padding on very small screens */
+        .card-body {
+            padding: 1rem !important;
+        }
+
+        /* Make pagination more compact */
+        .pagination .page-link {
+            padding: 0.375rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        /* Adjust gaps for buttons */
+        .page-header .d-flex.gap-2 {
+            gap: 0.5rem !important;
+        }
+
+        /* Filter buttons full width on mobile */
+        .filter-buttons {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+    }
+
+    /* Ensure badges don't overflow on mobile */
+    .badge {
+        white-space: normal;
+        word-break: break-word;
+        max-width: 100%;
+    }
+
+    .pagination .page-item {
+        margin: 0;
+    }
+
+    /* Prevent button text wrapping on small screens */
+    @media (max-width: 576px) {
+        .page-header .btn {
+            white-space: nowrap;
+            font-size: 0.9rem;
+            /* optional: slightly reduce font size to fit */
+        }
+    }
+
+    .pagination .page-link {
+        margin: 0 2px;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .task-actions {
+        text-align: end;
+    }
+
+    /* Make form buttons responsive on mobile */
+    @media (max-width: 576px) {
+        .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn+.btn {
+            margin-left: 0;
+        }
+
+        .col-12 .btn {
+            display: block;
+            width: 100%;
+        }
+
+        .col-12 .btn+.btn {
+            margin-top: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}

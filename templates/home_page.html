@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Home Page{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+
+            <!-- Flash messages as Bootstrap alerts -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show"
+                role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <!-- Main card -->
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h1 class="card-title display-5 mb-4">Welcome</h1>
+                    <p class="card-text text-muted mb-4">Organize your tasks efficiently and stay productive.</p>
+
+                    <!-- Main navigation: Task Manager (primary button) -->
+                    <div class="d-grid gap-3 mb-4">
+                        <a href="{{ url_for('show_tasks') }}" class="btn btn-success btn-lg">
+                            📋 Task Manager
+                        </a>
+                    </div>
+
+                    <!-- Auth buttons (secondary) -->
+                    <div class="d-flex justify-content-center gap-3">
+                        {% if not login_status %}
+                        <a href="{{ url_for('register') }}" class="btn col-4 btn-primary">Register</a>
+                        <a href="{{ url_for('login') }}" class="btn col-4 btn-outline-secondary">Login</a>
+                        {% else %}
+                        <div class="text-center mt-4">
+                            <small class="text-muted">Logged in as <strong>{{ current_user.username }}</strong> · <a
+                                    href="{{ url_for('logout') }}">Logout</a></small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
